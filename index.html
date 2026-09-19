@@ -83,6 +83,18 @@ button{border:0;border-radius:14px;padding:13px 20px;background:#087bd5;color:#f
   color:#167dc5;letter-spacing:.1px;pointer-events:none;
 }
 </style>
+
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#087bd5">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<style>
+#pwaInstallCard{position:fixed;left:12px;right:12px;bottom:14px;z-index:99999;background:#fff;border:2px solid #b9def4;border-radius:20px;box-shadow:0 10px 35px rgba(20,80,120,.22);padding:14px;display:none;align-items:center;gap:12px;font-family:Arial,sans-serif;color:#12345a}
+#pwaInstallCard .pwaText{flex:1;font-weight:800;font-size:14px;line-height:1.35}
+#pwaInstallCard small{display:block;font-weight:500;margin-top:3px;color:#54718a}
+#pwaInstallBtn{border:0;border-radius:12px;background:#087bd5;color:#fff;font-weight:900;padding:11px 14px;white-space:nowrap}
+#pwaLaterBtn{border:0;background:transparent;color:#54718a;font-weight:800;padding:7px 2px}
+@media(min-width:700px){#pwaInstallCard{max-width:540px;margin:auto;left:0;right:0}}
+</style>
 </head>
 <body>
 
@@ -435,6 +447,39 @@ async function saveScore(sc){try{let r=await fetch(API_URL,{method:'POST',header
 loadPublicLeaderboard();
 document.getElementById('continueBtn').onclick=login;document.getElementById('playNow').onclick=playNow;document.getElementById('playNow2').onclick=playNow;document.getElementById('playNow3').onclick=playNow;document.getElementById('resultPlay').onclick=playNow;document.getElementById('leaderBtn').onclick=()=>showScreen('leader');document.getElementById('profileBtn').onclick=()=>showScreen('profile');document.getElementById('resultLeader').onclick=()=>showScreen('leader');document.getElementById('resultProfile').onclick=()=>showScreen('profile');document.getElementById('backHome1').onclick=()=>showScreen('home');document.getElementById('backHome2').onclick=()=>showScreen('home');document.getElementById('rulesBtn').onclick=()=>document.getElementById('rulesModal').classList.add('on');document.getElementById('closeRules').onclick=()=>document.getElementById('rulesModal').classList.remove('on');document.getElementById('logoutBtn').onclick=()=>{localStorage.removeItem('cellixLixUser');appUser=null;showScreen('login')};
 if(appUser){document.getElementById('nameInput').value=appUser.name;document.getElementById('phoneInput').value=appUser.phone;showScreen('home')}else showScreen('login');
+</script>
+
+<div id="pwaInstallCard" role="dialog" aria-label="Install Cellix">
+  <div class="pwaText">📲 Install Cellix<small>أضف Lix Challenge إلى شاشة هاتفك للوصول السريع.</small></div>
+  <button id="pwaLaterBtn" type="button">لاحقًا</button>
+  <button id="pwaInstallBtn" type="button">INSTALL</button>
+</div>
+<script>
+(function(){
+  let deferredPrompt=null;
+  const card=document.getElementById('pwaInstallCard');
+  const install=document.getElementById('pwaInstallBtn');
+  const later=document.getElementById('pwaLaterBtn');
+  const standalone=window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+  function hide(){if(card) card.style.display='none';}
+  function show(){if(card && !standalone && localStorage.getItem('cellixPwaDismissed')!=='1') card.style.display='flex';}
+  window.addEventListener('beforeinstallprompt',e=>{
+    e.preventDefault(); deferredPrompt=e; show();
+  });
+  install.addEventListener('click',async()=>{
+    if(deferredPrompt){
+      deferredPrompt.prompt();
+      try{await deferredPrompt.userChoice;}catch(e){}
+      deferredPrompt=null; hide();
+    }else{
+      alert('إذا لم يظهر التثبيت تلقائيًا، افتح قائمة المتصفح ⋮ ثم اختر Add to Home screen أو Install app.');
+    }
+  });
+  later.addEventListener('click',()=>{localStorage.setItem('cellixPwaDismissed','1');hide();});
+  window.addEventListener('appinstalled',()=>{localStorage.setItem('cellixPwaInstalled','1');hide();});
+  setTimeout(()=>{if(!standalone && localStorage.getItem('cellixPwaInstalled')!=='1') show();},1600);
+  if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}
+})();
 </script>
 </body>
 </html><style>
