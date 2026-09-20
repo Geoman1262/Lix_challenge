@@ -377,6 +377,7 @@ setupGoldCycle();resetBlue();updateHUD();draw();requestAnimationFrame(loop);
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbwr-fr4aOrByhVb6wtV-C_EB1nl5swVRENkK4J96hGYwStxWbNPIJI6OF_r_1AF6C0ONQ/exec";
 const CONTEST_END=new Date("2026-09-26T23:59:59+03:00").getTime();
+const REFILL_WINDOW_MS=3*60*60*1000; // 3 hours
 let appUser=JSON.parse(localStorage.getItem("cellixLixUser")||"null");
 let gameSession=false, resultShown=false, lastGameScore=0;
 const screens={login:document.getElementById('loginScreen'),home:document.getElementById('homeScreen'),leader:document.getElementById('leaderScreen'),profile:document.getElementById('profileScreen'),result:document.getElementById('resultScreen')};
@@ -411,6 +412,8 @@ function renderBoard(top,me,publicMode=false){
 }
 function applyDashboard(d){
   refillMs=Number(d.resetInMs||d.nextAttemptMs||0);
+  // Frontend is locked to the current 3-hour refill window.
+  if(refillMs>REFILL_WINDOW_MS) refillMs=REFILL_WINDOW_MS;
   document.getElementById('welcomeName').textContent=appUser.name;
   document.getElementById('profileName').textContent=appUser.name;
   document.getElementById('profilePhone').textContent=appUser.phone;
