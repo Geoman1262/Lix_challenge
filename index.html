@@ -404,6 +404,15 @@ function useLocalAttempt(){let k='cellixAttempts_'+appUser.phone,c=JSON.parse(lo
 async function apiDashboard(){let r=await fetch(API_URL+'?action=dashboard&phone='+encodeURIComponent(appUser.phone));return r.json()}
 async function refreshDashboard(){if(!appUser)return;try{let d=await apiDashboard();if(d&&d.me&&d.me.name){appUser.name=d.me.name;localStorage.setItem('cellixLixUser',JSON.stringify(appUser));localStorage.setItem('cellixUser_'+appUser.phone,JSON.stringify(appUser))}applyDashboard(d)}catch(e){document.getElementById('saveMsg')?.textContent;}}
 let refillMs=0;
+function getSavedRefillEnd(){
+  if(!appUser)return 0;
+  return Number(localStorage.getItem('cellixRefillEnd_'+appUser.phone)||0);
+}
+function saveRefillEnd(ms){
+  if(!appUser)return;
+  if(ms>0) localStorage.setItem('cellixRefillEnd_'+appUser.phone,String(Date.now()+ms));
+  else localStorage.removeItem('cellixRefillEnd_'+appUser.phone);
+}
 function renderBoard(top,me,publicMode=false){
   let rows=(top||[]).map((r,i)=>'<div class="row"><span class="rank">'+(i+1)+'</span><span class="pname">'+esc(r.name||'Player')+((!publicMode&&appUser&&r.phone===appUser.phone)?'<span class="meTag">YOU</span>':'')+'</span><span class="pscore">'+Number(r.score||0)+'</span></div>').join('');
   if(!rows) rows='<div class="row"><span></span><span class="pname">No scores yet.</span><span></span></div>';
@@ -411,8 +420,19 @@ function renderBoard(top,me,publicMode=false){
   return rows;
 }
 function applyDashboard(d){
-  refillMs=Number(d.resetInMs||d.nextAttemptMs||0);
-  // Frontend is locked to the current 3-hour refill window.
+  const serverMs=Math.max(0,Number(d.resetInMs||d.nextAttemptMs||0));
+  const savedEnd=getSavedRefillEnd();
+  const savedMs=Math.max(0,savedEnd-Date.now());
+  // Persist the actual refill end time so reopening the PWA never restarts the 3-hour countdown.
+  if(Number(d.attemptsAvailable)===3){
+    refillMs=0;
+    saveRefillEnd(0);
+  }else if(savedMs>0){
+    refillMs=savedMs;
+  }else{
+    refillMs=Math.min(serverMs,REFILL_WINDOW_MS);
+    if(refillMs>0) saveRefillEnd(refillMs);
+  }
   if(refillMs>REFILL_WINDOW_MS) refillMs=REFILL_WINDOW_MS;
   document.getElementById('welcomeName').textContent=appUser.name;
   document.getElementById('profileName').textContent=appUser.name;
