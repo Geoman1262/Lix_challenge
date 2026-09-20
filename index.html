@@ -114,6 +114,7 @@ button{border:0;border-radius:14px;padding:13px 20px;background:#087bd5;color:#f
 }
 .cellix-footer{position:static!important;margin:7px 0 2px!important;padding:0!important;font-size:12px!important}
 </style>
+<meta name="cellix-build" content="records-fix-2026-09-21-v2">
 </head>
 <body>
 
@@ -421,7 +422,7 @@ function localDashboard(){let a=localAll();let best={};a.forEach(r=>{if(!best[r.
 function localAttempts(){let k='cellixAttempts_'+appUser.phone,c=JSON.parse(localStorage.getItem(k)||'null'),now=Date.now();if(!c||now-c.start>=10800000)c={start:now,used:0};let available=Math.max(0,3-c.used);return {available,reset:available?0:c.start+10800000-now}}
 function useLocalAttempt(){let k='cellixAttempts_'+appUser.phone,c=JSON.parse(localStorage.getItem(k)||'null'),now=Date.now();if(!c||now-c.start>=10800000)c={start:now,used:0};if(c.used>=3)return {ok:false,message:'All 3 attempts are used. Reset in '+fmt(c.start+10800000-now)};c.used++;localStorage.setItem(k,JSON.stringify(c));return {ok:true,attempt:c.used}}
 async function apiDashboard(){let r=await fetch(API_URL+'?action=dashboard&phone='+encodeURIComponent(appUser.phone));return r.json()}
-async function refreshDashboard(){if(!appUser)return;try{let d=await apiDashboard();if(d&&d.me&&d.me.name){appUser.name=d.me.name;localStorage.setItem('cellixLixUser',JSON.stringify(appUser));localStorage.setItem('cellixUser_'+appUser.phone,JSON.stringify(appUser))}applyDashboard(d)}catch(e){document.getElementById('saveMsg')?.textContent;}}
+async function refreshDashboard(){if(!appUser)return;try{let d=await apiDashboard();if(d&&d.me&&d.me.name){appUser.name=d.me.name;localStorage.setItem('cellixLixUser',JSON.stringify(appUser));localStorage.setItem('cellixUser_'+appUser.phone,JSON.stringify(appUser))}if(d&&Array.isArray(d.records)){localStorage.setItem('cellixRecords_'+appUser.phone,JSON.stringify(d.records))}applyDashboard(d)}catch(e){let cached=JSON.parse(localStorage.getItem('cellixRecords_'+appUser.phone)||'[]');if(cached.length){applyDashboard({top10:[],me:{name:appUser.name,score:0,rank:'—'},records:cached,attemptsAvailable:0,resetInMs:0})}}}
 let refillMs=0;
 function saveRefillEnd(ms){
   if(!appUser)return;
@@ -452,8 +453,9 @@ function applyDashboard(d){
   document.getElementById('homeBestLabel').textContent='Best score: '+Number(me.score||0);
   document.getElementById('bestScore').textContent=Number(me.score||0);
   document.getElementById('myRank').textContent=me.rank||'—';
-  let rec=d.records||[];
-  document.getElementById('records').innerHTML=rec.length?rec.map(r=>'<div class="record"><span><b>SCORE '+Number(r.score||0)+'</b><br><span class="muted">'+new Date(r.time).toLocaleString()+' • Attempt '+(r.attempt||'—')+'</span></span></div>').join(''):'<div class="record"><span class="muted">No records yet.</span></div>';
+  let rec=Array.isArray(d.records)?d.records:[];
+  if(!rec.length && appUser) rec=JSON.parse(localStorage.getItem('cellixRecords_'+appUser.phone)||'[]');
+  document.getElementById('records').innerHTML=rec.length?rec.map(r=>'<div class="record"><span><b>SCORE '+Number(r.score||0)+'</b><br><span class="muted">'+(r.time?new Date(r.time).toLocaleString():'')+' • Attempt '+(r.attempt||'—')+'</span></span></div>').join(''):'<div class="record"><span class="muted">No records yet.</span></div>';
 }
 async function loadPublicLeaderboard(){
   try{
@@ -501,7 +503,7 @@ async function saveScore(sc){
   await refreshDashboard();
 }
 loadPublicLeaderboard();
-document.getElementById('continueBtn').onclick=login;document.getElementById('playNow').onclick=playNow;document.getElementById('playNow2').onclick=playNow;document.getElementById('playNow3').onclick=playNow;document.getElementById('resultPlay').onclick=playNow;document.getElementById('leaderBtn').onclick=()=>showScreen('leader');document.getElementById('profileBtn').onclick=()=>showScreen('profile');document.getElementById('resultLeader').onclick=()=>showScreen('leader');document.getElementById('resultProfile').onclick=()=>showScreen('profile');document.getElementById('backHome1').onclick=()=>showScreen('home');document.getElementById('backHome2').onclick=()=>showScreen('home');document.getElementById('rulesBtn').onclick=()=>document.getElementById('rulesModal').classList.add('on');document.getElementById('closeRules').onclick=()=>document.getElementById('rulesModal').classList.remove('on');document.getElementById('logoutBtn').onclick=()=>{currentAttemptToken='';if(appUser)localStorage.removeItem('cellixRefillEnd_'+appUser.phone);localStorage.removeItem('cellixLixUser');appUser=null;showScreen('login')};
+document.getElementById('continueBtn').onclick=login;document.getElementById('playNow').onclick=playNow;document.getElementById('playNow2').onclick=playNow;document.getElementById('playNow3').onclick=playNow;document.getElementById('resultPlay').onclick=playNow;document.getElementById('leaderBtn').onclick=()=>showScreen('leader');document.getElementById('profileBtn').onclick=async()=>{await refreshDashboard();showScreen('profile')};document.getElementById('resultLeader').onclick=()=>showScreen('leader');document.getElementById('resultProfile').onclick=async()=>{await refreshDashboard();showScreen('profile')};document.getElementById('backHome1').onclick=()=>showScreen('home');document.getElementById('backHome2').onclick=()=>showScreen('home');document.getElementById('rulesBtn').onclick=()=>document.getElementById('rulesModal').classList.add('on');document.getElementById('closeRules').onclick=()=>document.getElementById('rulesModal').classList.remove('on');document.getElementById('logoutBtn').onclick=()=>{currentAttemptToken='';if(appUser)localStorage.removeItem('cellixRefillEnd_'+appUser.phone);localStorage.removeItem('cellixLixUser');appUser=null;showScreen('login')};
 if(appUser){document.getElementById('nameInput').value=appUser.name;document.getElementById('phoneInput').value=appUser.phone;showScreen('home')}else showScreen('login');
 </script>
 
